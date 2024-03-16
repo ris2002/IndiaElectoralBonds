@@ -11,8 +11,9 @@ def import_donor_data():
     df = pd.read_csv('.data/donor.csv')
     # TODO: complete the remaining code
 
+
 def import_party_data():
-    df = pd.read_csv('.data/donor.csv')
+    df = pd.read_csv('.data/party.csv')
     # TODO: complete the remaining code
 
 import_donor_data()
