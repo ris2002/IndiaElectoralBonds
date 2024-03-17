@@ -4,16 +4,17 @@ import numpy as np
 import psycopg2
 
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
 def import_donor_data():
-    df = pd.read_csv('.data/donor.csv')
+    df = pd.read_csv('./data/donors.csv')
     # TODO: complete the remaining code
 
 
 def import_party_data():
-    df = pd.read_csv('.data/party.csv')
+    df = pd.read_csv('./data/parties.csv')
     # TODO: complete the remaining code
 
 import_donor_data()
@@ -26,15 +27,17 @@ import_party_data()
 3. Add purchase_date,year,month,date columns to the dataframe
 4. Fill the purchase_date (date format),year,month,date columns
 
-  
-
+'''
 
 # Read the CSV file
-df = pd.read_csv('.data/donor.csv')
+df = pd.read_csv('./data/donors.csv')
 
 # Cleanup data
-df['birthDate'] = pd.to_datetime(df['birthDate'].astype(str).str.split().str.get(0)).dt.date
-df['date'] = pd.to_datetime(df['date'].astype(str).str.split().str.get(0)).dt.date
+df['purchase_date'] = pd.to_datetime(df['p_date'].astype(str).str.split().str.get(0)).dt.date
+df['year'] = df['purchase_date'].astype(str).apply(lambda date_string: (datetime.strptime(date_string, '%Y-%m-%d').year))
+df['month'] = df['purchase_date'].astype(str).apply(lambda date_string: (datetime.strptime(date_string, '%Y-%m-%d').month))
+df['date'] = df['purchase_date'].astype(str).apply(lambda date_string: (datetime.strptime(date_string, '%Y-%m-%d').day))
+df['denomination'] = df['denomination'].astype(int)
 df = df.replace({np.nan: None})
 
 # Get a connection to Postgres
@@ -48,25 +51,13 @@ conn = psycopg2.connect(
 conn.autocommit = True
 cursor = conn.cursor()
 
-query = """INSERT INTO Billionaires2023 (worldRank, finalWorth, category, personName, age,
-    country, city, source, industries, countryOfCitizenship, organization, selfMade, status, gender, 
-    birthDate, lastName, firstName, title, date, state, residenceStateRegion, birthYear, birthMonth, 
-    birthDay) 
-     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-      %s, %s, %s, %s)"""
+query = """INSERT INTO donor (p_date, donor_name, denomination, purchase_date, year, month, date) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)"""
 query = ' '.join(query.split('\n'))
 
-
 for index, row in df.iterrows():
-    values = (row['worldRank'], row['finalWorth'], row['category'], row['personName'], 
-                row['age'], row['country'], row['city'], row['source'], 
-                row['industries'], row['countryOfCitizenship'], row['organization'], row['selfMade'], 
-                row['status'], row['gender'], row['birthDate'], row['lastName'], 
-                row['firstName'], row['title'], row['date'], row['state'], 
-                row['residenceStateRegion'], row['birthYear'], row['birthMonth'], row['birthDay'])
+    values = (row['p_date'], row['donor_name'], row['denomination'], row['purchase_date'], row['year'], row['month'], row['date'])
     cursor.execute(query, values)
     conn.commit()
 
 conn.close()
-
-'''
