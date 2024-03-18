@@ -34,7 +34,7 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}ui 
+          appSourcePath: ${{ github.workspace }}/ui 
           registryUrl: cr4ebgate32407.azurecr.io
           registryUsername: ${{ secrets.EBGATE_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.EBGATE_REGISTRY_PASSWORD }}
