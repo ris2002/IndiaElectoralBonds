@@ -2,3 +2,4 @@ streamlit
 langchain
 langchain_openai
 psycopg2-binary
+python-dotenv
