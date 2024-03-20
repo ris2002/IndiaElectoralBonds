@@ -88,7 +88,8 @@ def generate_response(user_question):
     if (str(sqlquery.upper()).startswith("SELECT")):
         response = final_chain.invoke({"question": standardised_question, "query": sqlquery})
   
-    print("utils.py :: response: "+response)
+   
+    store_question(user_question, standardised_question, sqlquery, response)
     return response
 
 def get_schema(_):
@@ -97,3 +98,18 @@ def get_schema(_):
 
 def run_query(query):
     return sqldb.run(query)
+
+def store_question(user_question, 
+                    standardised_question, 
+                    sqlquery, 
+                    response):
+ 
+    conn = psycopg2.connect(host=host, database=database, user=username, password=password)
+    conn.autocommit = True
+    cursor = conn.cursor()
+    query = """INSERT INTO user_question (user_question, standardised_question, sql_query, final_response) VALUES (%s, %s, %s, %s)"""
+    values = (user_question, standardised_question, sqlquery, response)
+    cursor.execute(query, values)
+    conn.commit()
+
+    conn.close()
