@@ -1,20 +1,42 @@
-import streamlit as st
+import os
 from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-import psycopg2 as pg
-from llm import *
+from langchain_openai.chat_models import ChatOpenAI
+import psycopg2
+from dotenv import load_dotenv, find_dotenv
 
-tables = ["party","donor","party_master"]
-host = st.secrets.get("DB_HOST")
-database = st.secrets.get("DB_NAME")
-username = st.secrets.get("DB_USERNAME")
-password = st.secrets.get("DB_PASSWORD")
+if find_dotenv():
+    load_dotenv(find_dotenv())
+
+openai_api_key = os.getenv("openai-api-key")
+openai_model = os.getenv("openai-model")
+
+
+os.environ["OPENAI_API_KEY"] = openai_api_key
+
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("langchain-api-key")    
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("langchain-project")
+
+llm = ChatOpenAI(
+    openai_api_key=openai_api_key,
+    model=openai_model,
+    temperature=0
+)
+
+tables = ["party","donor","party_master","donor_master"]
+
+host=os.getenv("db-host")
+database=os.getenv("db-name")
+username=os.getenv("db-username")
+password=os.getenv("db-password")
 
 uri = f"postgresql+psycopg2://{username}:{password}@{host}/{database}"
 
-sqldb = SQLDatabase.from_uri(database_uri=uri, ignore_tables=[])
+sqldb = SQLDatabase.from_uri(database_uri=uri, include_tables=tables)
 
 
 def generate_response(user_question):
