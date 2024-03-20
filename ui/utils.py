@@ -64,6 +64,8 @@ def generate_response(user_question):
 
     template = """Based on the question, sql query, and sql response, write a natural language response:
    
+    IMPORTANT: The denomination amount is in Indian rupees. Please show the commas as lakhs and crores format.
+
     If an exception happens, please say 
     'I am unable to answer your question at this time'
 
