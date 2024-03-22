@@ -5,7 +5,6 @@ import os
 import base64
 
 
-
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -42,6 +41,18 @@ for msg in st.session_state.chat_history:
         st.chat_message("human").write(msg.content)
 
 
+def generate_history():
+    context = []
+    # If any history exists
+    if st.session_state["chat_history"]:
+        # Add the last three exchanges
+        size = len(st.session_state["chat_history"])
+        for i in range(max((size-1) - 6, 1), size-1):
+            context.append(
+                (st.session_state["chat_history"][i])
+            )
+    return context
+
 def handle_submit(query):
     """
     Submit handler:
@@ -50,7 +61,15 @@ def handle_submit(query):
     # Handle the response
     with st.spinner('Thinking...'):
         #response = " :smile: Response to the question: " + query
-        response = generate_response(query)
+        history = generate_history()
+        #print(history)
+        # put the following line try catch block
+        try:
+            response = generate_response(query)
+        except Exception as e:
+            response = f"I am unable to answer your question at this time. Please try again."
+
+        
         write_message('assistant', response)
         
  
