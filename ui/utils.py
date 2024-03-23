@@ -79,6 +79,9 @@ def generate_response(user_question):
     sql_template = """Based on the table schema below, write a SQL query to answer the user's question:
     {schema}
     Please note the giver is the bond donor and the receiver is the bond party.
+    Use ILIKE operator when comparing purchaser_name and political_party_name.
+    Check both political_party_name and political_party_code columns when checking for party, use OR condition.
+  
     Please just return the SQL query and not the result.
     Use the format\nQuestion:...\nSQLResult:...\n\n"),
     Question: {question}
@@ -95,9 +98,9 @@ def generate_response(user_question):
     )
 
     sqlquery = sql_chain.invoke({"question": standardised_question})
-    #sqlquery = sqlquery.strip("```sql").strip("```").strip()
+    sqlquery = sqlquery.strip()
     print("utils.py :: sqlquery: "+sqlquery)
-
+    
     sqlresponse_template = """Based on the sql query, get sql response:
     SQL Query: {query}
     SQL Response: {response} """
@@ -108,12 +111,12 @@ def generate_response(user_question):
 
     sql_response = "I am unable to answer your question at this time."
     # Remove the spaces in the beginning and end of the SQL query
-    sqlquery = sqlquery.strip()
+    
     if (str(sqlquery.upper()).startswith("SELECT")):
         sql_response = sqlresponse_chain.invoke({"query": sqlquery})["response"]
         
 
-    print("utils.py :: sql_response: "+str(sql_response))
+    #print("utils.py :: sql_response: "+str(sql_response))
 
     # Convert the SQL response to a list of tuples
     l_response = eval(sql_response)
