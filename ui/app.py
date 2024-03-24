@@ -3,6 +3,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from utils import generate_response
 import os
 import base64
+from utils import get_party_options, get_donor_options
 
 
 def get_base64_of_bin_file(bin_file):
@@ -25,7 +26,6 @@ app_title = get_img_with_href('images/beta.jpeg')
 st.markdown(app_title, unsafe_allow_html=True)
 
 st.write("You may ask questions about parties who encashed the electoral bonds or donors who purchased the electoral bonds")
-
 
 # Setup session state
 if "chat_history" not in st.session_state:
@@ -65,14 +65,15 @@ def handle_submit(query):
         #print(history)
         # put the following line try catch block
         try:
+            query = "Selected parties: " + str(st.session_state.selected_parties) + " Selected donors: " + str(st.session_state.selected_donors) + " " + query
             response = generate_response(query)
         except Exception as e:
             response = f"I am unable to answer your question at this time. Please try again."
 
         
         write_message('assistant', response)
-        
- 
+
+
 def write_message(role, content):
     """
     This is a helper function that writes a message to the UI
@@ -88,12 +89,20 @@ def write_message(role, content):
     with st.chat_message(role):
         st.markdown(content)
 
+
 # Handle any user input
+
 if prompt := st.chat_input("What is up?"):
     # Display user message in chat message container
     write_message('user', prompt)
 
     # Generate a response
     handle_submit(prompt)
-    
+
+col1, col2 = st.columns(2)
+with col1:
+    # put the values in a session state    
+    st.session_state.selected_parties = st.multiselect("Select Party", options=get_party_options(), default=[])
+with col2:
+    st.session_state.selected_donors = st.multiselect("Select Donor", options=get_donor_options(), default=[])
 

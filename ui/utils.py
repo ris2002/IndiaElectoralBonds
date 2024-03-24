@@ -7,10 +7,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai.chat_models import ChatOpenAI
 import psycopg2
 from dotenv import load_dotenv, find_dotenv
-import locale
 from decimal import Decimal
 import re
-
+import ast
 
 if find_dotenv():
     load_dotenv(find_dotenv())
@@ -71,15 +70,17 @@ def format_response(sql_response):
     return formatted_response
 
 
-
 def generate_response(user_question):
-    print("utils.py :: user_question: "+user_question)
+    #print("utils.py :: user_question: "+user_question)
     standardised_question = user_question
    
     sql_template = """Based on the table schema below, write a SQL query to answer the user's question:
     {schema}
     Please note the giver is the bond donor and the receiver is the bond party.
-    Use ILIKE operator when comparing purchaser_name and political_party_name.
+    Please do not use s_no column in the query.
+    Do not compare purchaser_name and political_party_name as they do not represent the same entity.
+    Use unique_bond_number when you need to join bond_party and bond_donor tables.
+    If more than one political_party_name or purchaser_name is selected, use IN operator.
     Check both political_party_name and political_party_code columns when checking for party, use OR condition.
   
     Please just return the SQL query and not the result.
@@ -99,7 +100,7 @@ def generate_response(user_question):
 
     sqlquery = sql_chain.invoke({"question": standardised_question})
     sqlquery = sqlquery.strip()
-    print("utils.py :: sqlquery: "+sqlquery)
+    #print("utils.py :: sqlquery: "+sqlquery)
     
     sqlresponse_template = """Based on the sql query, get sql response:
     SQL Query: {query}
@@ -109,34 +110,37 @@ def generate_response(user_question):
         RunnablePassthrough.assign(response=lambda x: run_query(x["query"]))
     )
 
-    sql_response = "I am unable to answer your question at this time."
-    # Remove the spaces in the beginning and end of the SQL query
+    response = "I am unable to answer your question at this time."
     
     if (str(sqlquery.upper()).startswith("SELECT")):
-        sql_response = sqlresponse_chain.invoke({"query": sqlquery})["response"]
+        #print("utils.py :: before running the sql query")
+        response = sqlresponse_chain.invoke({"query": sqlquery})["response"]
+        #print("utils.py :: sql_response (inside): "+str(response))
         
 
-    #print("utils.py :: sql_response: "+str(sql_response))
+    #print("utils.py :: sql_response: "+str(response))
 
+    # If response is not equal to "I am unable to answer your question at this time."
+    if response != "I am unable to answer your question at this time.":
     # Convert the SQL response to a list of tuples
-    l_response = eval(sql_response)
-    formatted_response = format_response(l_response)
+        l_response = eval(response)
+        formatted_response = format_response(l_response)
+        
+        final_template = """Based on the question and response, write a natural language response:
     
-    final_template = """Based on the question and response, write a natural language response:
-   
-    Question: {question}
-    Response: {sql_response} """
-    final_prompt = ChatPromptTemplate.from_template(final_template)
-    
-    final_chain = (
-        final_prompt
-        | model
-        | StrOutputParser()
-    )
+        Question: {question}
+        Response: {sql_response} """
+        final_prompt = ChatPromptTemplate.from_template(final_template)
+        
+        final_chain = (
+            final_prompt
+            | model
+            | StrOutputParser()
+        )
 
-    response = final_chain.invoke({"question": standardised_question, "sql_response": formatted_response})
+        response = final_chain.invoke({"question": standardised_question, "sql_response": formatted_response})
   
-    #store_question(user_question, standardised_question, sqlquery, response)
+    store_question(user_question, standardised_question, sqlquery, response)
     return response
     
 
@@ -211,6 +215,8 @@ def generate_response2(user_question):
 
 
 def generate_response1(user_question):
+
+
     print("utils.py :: user_question: "+user_question)
     standardised_question = user_question
    
@@ -264,3 +270,19 @@ def generate_response1(user_question):
     store_question(user_question, standardised_question, sqlquery, response)
     return response
 
+
+def get_donor_options():
+    query = "SELECT DISTINCT purchaser_name FROM bond_donor ORDER BY purchaser_name ASC"
+    result = sqldb.run(query)
+    result = ast.literal_eval(result)
+    donor_options = [row[0] for row in result]
+    return donor_options
+
+
+def get_party_options():
+    query = "SELECT DISTINCT political_party_name FROM bond_party ORDER BY political_party_name ASC"
+    result = sqldb.run(query)  
+    result = ast.literal_eval(result)
+    names = [item[0] for item in result]
+    party_options = names
+    return party_options
