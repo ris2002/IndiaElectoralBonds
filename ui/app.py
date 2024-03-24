@@ -64,11 +64,11 @@ def handle_submit(query):
         history = generate_history()
         #print(history)
         # put the following line try catch block
-        #try:
-        query = "Selected parties: " + str(st.session_state.selected_parties) + " Selected donors: " + str(st.session_state.selected_donors) + " " + query
-        response = generate_response(query)
-        #except Exception as e:
-        #response = f"I am unable to answer your question at this time. Please try again." + str(e)
+        try:
+            query = "Selected parties: " + str(st.session_state.selected_parties) + " Selected donors: " + str(st.session_state.selected_donors) + " " + query
+            response = generate_response(query)
+        except Exception as e:
+            response = f"I am unable to answer your question at this time. Please try again."
 
         
         write_message('assistant', response)

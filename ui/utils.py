@@ -140,7 +140,7 @@ def generate_response(user_question):
 
         response = final_chain.invoke({"question": standardised_question, "sql_response": formatted_response})
   
-    #store_question(user_question, standardised_question, sqlquery, response)
+    store_question(user_question, standardised_question, sqlquery, response)
     return response
     
 
