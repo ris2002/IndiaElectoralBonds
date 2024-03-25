@@ -20,7 +20,7 @@ def get_img_with_href(local_img_path):
                     alt='Beta Icon'></sup></h1>'''
     return app_title
 
-app_title = get_img_with_href('ui/images/beta.jpeg')
+app_title = get_img_with_href('images/beta.jpeg')
 
 # Display the title using Markdown
 st.markdown(app_title, unsafe_allow_html=True)
