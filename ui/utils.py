@@ -69,11 +69,96 @@ def format_response(sql_response):
         formatted_response.append(tuple(formatted_row))
     return formatted_response
 
+#Translate [input_text] to [target_language] 
+def translate_text(input_text,target_language):
+    prompt = ChatPromptTemplate.from_template(f"""Translate {input_text} to {target_language} """)
+    
+    output_parser = StrOutputParser()
+    model = llm
+    chain = prompt | model | output_parser
+    translated_text = chain.invoke({"input_text":input_text})
+    return translated_text
+
+# Generate response based on selected language
+def generate_response_language(user_question, target_language):
+    #print("utils.py :: user_question: "+user_question + " target_language: "+target_language)
+    standardised_question = user_question
+    
+    if target_language != 'English':
+        #if selected language is other than english, translate text to english to form sql query
+        standardised_question = translate_text(user_question, 'English')
+    
+    sql_template = """Based on the table schema below, write a SQL query to answer the user's question:
+    {schema}
+    Please note the giver is the bond donor and the receiver is the bond party.
+    Please do not use s_no column in the query.
+    Do not compare purchaser_name and political_party_name as they do not represent the same entity.
+    Use unique_bond_number when you need to join bond_party and bond_donor tables.
+    If more than one political_party_name or purchaser_name is selected, use IN operator.
+    Check both political_party_name and political_party_code columns when checking for party, use OR condition.
+  
+    Please just return the SQL query and not the result.
+    Use the format\nQuestion:...\nSQLResult:...\n\n"),
+    Question: {question}
+    SQL Query: """
+  
+    sql_prompt = ChatPromptTemplate.from_template(sql_template)
+    model = llm
+
+    sql_chain = (
+        RunnablePassthrough.assign(schema=get_schema)
+        | sql_prompt
+        | model.bind(stop=["\nSQLResult:"])
+        | StrOutputParser()
+    )
+
+    sqlquery = sql_chain.invoke({"question": standardised_question})
+    sqlquery = sqlquery.strip()
+    #print("utils.py :: sqlquery: "+sqlquery)
+    
+    sqlresponse_template = """Based on the sql query, get sql response:
+    SQL Query: {query}
+    SQL Response: {response} """
+    sqlresponse_prompt = ChatPromptTemplate.from_template(sqlresponse_template)
+    sqlresponse_chain = (
+        RunnablePassthrough.assign(response=lambda x: run_query(x["query"]))
+    )
+
+    response = "I am unable to answer your question at this time."
+    
+    if (str(sqlquery.upper()).startswith("SELECT")):
+        response = sqlresponse_chain.invoke({"query": sqlquery})["response"]
+        #print("utils.py :: sql_response (inside): "+str(response))
+  
+    # If response is not equal to "I am unable to answer your question at this time."
+    if response != "I am unable to answer your question at this time.":
+    # Convert the SQL response to a list of tuples
+        l_response = eval(response)
+        formatted_response = format_response(l_response)
+        
+        final_template = """Based on the question and response, write a natural language response:
+    
+        Question: {question}
+        Response: {sql_response} """
+        final_prompt = ChatPromptTemplate.from_template(final_template)
+        
+        final_chain = (
+            final_prompt
+            | model
+            | StrOutputParser()
+        )
+
+        response = final_chain.invoke({"question": standardised_question, "sql_response": formatted_response})
+  
+    if target_language != 'English':
+        response = translate_text(response, target_language)
+    store_question(user_question, standardised_question, sqlquery, response)
+    return response
 
 def generate_response(user_question):
     #print("utils.py :: user_question: "+user_question)
     standardised_question = user_question
-   
+    
     sql_template = """Based on the table schema below, write a SQL query to answer the user's question:
     {schema}
     Please note the giver is the bond donor and the receiver is the bond party.
@@ -286,3 +371,7 @@ def get_party_options():
     names = [item[0] for item in result]
     party_options = names
     return party_options
+
+def get_lang_options():
+    lang_list=['English','Telugu', 'Hindi']
+    return lang_list

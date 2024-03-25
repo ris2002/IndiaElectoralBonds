@@ -1,9 +1,9 @@
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
-from utils import generate_response
+from utils import generate_response, generate_response_language
 import os
 import base64
-from utils import get_party_options, get_donor_options
+from utils import get_party_options, get_donor_options, get_lang_options
 
 
 def get_base64_of_bin_file(bin_file):
@@ -20,7 +20,7 @@ def get_img_with_href(local_img_path):
                     alt='Beta Icon'></sup></h1>'''
     return app_title
 
-app_title = get_img_with_href('images/beta.jpeg')
+app_title = get_img_with_href('ui/images/beta.jpeg')
 
 # Display the title using Markdown
 st.markdown(app_title, unsafe_allow_html=True)
@@ -65,8 +65,9 @@ def handle_submit(query):
         #print(history)
         # put the following line try catch block
         try:
-            query = "Selected parties: " + str(st.session_state.selected_parties) + " Selected donors: " + str(st.session_state.selected_donors) + " " + query
-            response = generate_response(query)
+            query = "Selected parties: " + str(st.session_state.selected_parties) + " Selected donors: " + str(st.session_state.selected_donors) + " " + query # + "Selected language: " + str(st.session_state.selected_language)
+            #response = generate_response(query)
+            response = generate_response_language(query, ""+str(st.session_state.selected_language))
         except Exception as e:
             response = f"I am unable to answer your question at this time. Please try again."
 
@@ -99,10 +100,13 @@ if prompt := st.chat_input("What is up?"):
     # Generate a response
     handle_submit(prompt)
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 with col1:
     # put the values in a session state    
     st.session_state.selected_parties = st.multiselect("Select Party", options=get_party_options(), default=[])
 with col2:
     st.session_state.selected_donors = st.multiselect("Select Donor", options=get_donor_options(), default=[])
+
+with col3:
+    st.session_state.selected_language = st.multiselect("Select Language", options=get_lang_options(), default=[])
 
